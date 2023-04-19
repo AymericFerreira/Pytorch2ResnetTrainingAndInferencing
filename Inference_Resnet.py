@@ -14,7 +14,7 @@ def main(model_path, images_dir, confidence_threshold, num_classes, device='cpu'
 
     # Create an instance of your model architecture
     model = fasterrcnn_resnet50_fpn_v2(num_classes=num_classes)
-    
+
     model.load_state_dict(state_dict)
 
     # Move the model to the specified device
@@ -49,7 +49,7 @@ def main(model_path, images_dir, confidence_threshold, num_classes, device='cpu'
                     draw = ImageDraw.Draw(image)
                     draw.rectangle([x1, y1, x2, y2], outline='red', width=3)
             pbar.set_postfix({'Detections': detections})
-            tested_image_name = os.path.splitext(image_name)[0] + '_tested' + os.path.splitext(image_name)[1]
+            tested_image_name = f'{os.path.splitext(image_name)[0]}_tested{os.path.splitext(image_name)[1]}'
             tested_image_path = os.path.join(results_dir, tested_image_name)
             image.save(tested_image_path)
         end_time = time.time()

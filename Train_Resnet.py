@@ -97,15 +97,15 @@ class CustomVOCDetection(Dataset):
         image_filename = self.image_filenames[idx]
         image_path = os.path.join(self.image_dir, image_filename)
         image = Image.open(image_path).convert('RGB')
-        annotation_filename = os.path.splitext(image_filename)[0] + '.xml'
+        annotation_filename = f'{os.path.splitext(image_filename)[0]}.xml'
         annotation_path = os.path.join(self.annotations_dir, annotation_filename)
-        
+
         # Load and process the XML annotations
         boxes, labels = self.load_annotations(annotation_path)
-        
+
         # Convert the image to a tensor
         image = transforms.ToTensor()(image)
-        
+
         labels = torch.tensor(labels)
         target = {
             'boxes': boxes,
@@ -157,7 +157,7 @@ def train_one_epoch(model, optimizer, data_loader, device):
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         optimizer.zero_grad()
         loss_dict = model(images, targets)
-        losses = sum(loss for loss in loss_dict.values())
+        losses = sum(loss_dict.values())
         losses.backward()
         optimizer.step()
         pbar.set_description(f'Loss: {losses.item():.4f}')
@@ -192,18 +192,18 @@ def calculate_ap(pred_boxes, pred_labels, pred_scores, true_boxes, true_labels):
         # Get the predicted boxes and scores for class c
         class_pred_boxes = pred_boxes[pred_labels == c]
         class_pred_scores = pred_scores[pred_labels == c]
-        
+
         # Get the true boxes for class c
         class_true_boxes = true_boxes[true_labels == c]
-        
+
         # Sort the predicted boxes by their scores
         sorted_indices = torch.argsort(class_pred_scores, descending=True)
         class_pred_boxes = class_pred_boxes[sorted_indices]
-        
+
         # Initialize the true positive and false positive arrays
         tp = torch.zeros(len(class_pred_boxes))
         fp = torch.zeros(len(class_pred_boxes))
-        
+
         # Iterate over the predicted boxes
         for i, box in enumerate(class_pred_boxes):
             if len(class_true_boxes) == 0:
@@ -212,10 +212,10 @@ def calculate_ap(pred_boxes, pred_labels, pred_scores, true_boxes, true_labels):
             else:
                 # Calculate the IoU between this box and all true boxes
                 iou = box_iou(box.unsqueeze(0), class_true_boxes)[0]
-                
+
                 # Find the true box with the maximum IoU
                 max_iou, max_index = iou.max(0)
-                
+
                 if max_iou >= iou_threshold:
                     # If the maximum IoU is above the threshold,
                     # mark this prediction as a true positive and remove the matched true box
@@ -224,16 +224,13 @@ def calculate_ap(pred_boxes, pred_labels, pred_scores, true_boxes, true_labels):
                 else:
                     # Otherwise, mark this prediction as a false positive
                     fp[i] = 1
-        
+
         # Calculate the precision and recall
         fp = fp.cumsum(0)
         tp = tp.cumsum(0)
-        if len(true_boxes) == 0:
-            recall = torch.zeros_like(tp)
-        else:
-            recall = tp / len(true_boxes)
+        recall = torch.zeros_like(tp) if len(true_boxes) == 0 else tp / len(true_boxes)
         precision = tp / (tp + fp)
-        
+
         # Calculate the average precision
         ap = 0
         for t in torch.linspace(0, 1, 11):
@@ -242,7 +239,7 @@ def calculate_ap(pred_boxes, pred_labels, pred_scores, true_boxes, true_labels):
             else:
                 p = precision[recall >= t].max().item()
             ap += p / 11
-    
+
     return ap
 
 
